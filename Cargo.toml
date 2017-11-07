@@ -1,0 +1,7 @@
+[package]
+name = "integeriser"
+version = "0.1.0"
+authors = ["Tobias Denkinger <tobias.denkinger@tu-dresden.de>"]
+license = "bsd-3-clause"
+description = "Data-structures that represent values by unique integers."
+repository = "https://github.com/tud-fop/rust-integeriser"
