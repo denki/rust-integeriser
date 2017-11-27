@@ -5,6 +5,10 @@ use std::collections::hash_map;
 use std::hash::{Hash, Hasher};
 use std::vec::Vec;
 
+extern crate serde;
+use serde::ser::{Serialize, Serializer};
+use serde::de::{Deserialize, Deserializer};
+
 pub trait Integeriser {
     type Item;
 
@@ -118,6 +122,21 @@ impl<A: Eq + Hash> Hash for HashIntegeriser<A> {
     }
 }
 
+impl<A: Eq + Hash + Serialize> Serialize for HashIntegeriser<A> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.map.serialize(serializer)
+    } 
+}
+
+impl<'de, A: Eq + Hash + Clone + Deserialize<'de>> Deserialize<'de> for HashIntegeriser<A> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map: Vec<A> = Vec::deserialize(deserializer)?;
+        let rmap: HashMap<A, usize> = map.iter().cloned().enumerate().map(| (x,y) | (y,x)).collect();
+
+        Ok(HashIntegeriser{ map, rmap })
+    } 
+}
+
 
 /// Structure that maps to every element of type `A` an integer of type `usize`, given that `A: Eq + Ord`.  Mapping goes both ways.
 ///
@@ -215,3 +234,17 @@ impl<A: Eq + Ord + Hash> Hash for BTreeIntegeriser<A> {
     }
 }
 
+impl<A: Ord + Serialize> Serialize for BTreeIntegeriser<A> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.map.serialize(serializer)
+    } 
+}
+
+impl<'de, A: Ord + Clone + Deserialize<'de>> Deserialize<'de> for BTreeIntegeriser<A> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map: Vec<A> = Vec::deserialize(deserializer)?;
+        let rmap: BTreeMap<A, usize> = map.iter().cloned().enumerate().map(|(x,y)| (y,x)).collect();
+        
+        Ok(BTreeIntegeriser{ map, rmap })
+    } 
+}
