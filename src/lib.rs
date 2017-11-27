@@ -12,7 +12,9 @@ use serde::de::{Deserialize, Deserializer};
 pub trait Integeriser {
     type Item;
 
-    /// Returns a unique integer for the given value `a: Self::Item`.  The returned integer will always be the same for equal (w.r.t. `Eq`) values `a` and different for different (w.r.t. `Eq`) values `a`.
+    /// Returns a unique integer for the given value `a: Self::Item`.
+    /// The returned integer will always be the same for equal (w.r.t. `Eq`)
+    /// values `a` and different for different (w.r.t. `Eq`) values `a`.
     /// The integers are assigned consecutively starting from `0`.
     fn integerise(&mut self, a: Self::Item) -> usize;
 
@@ -26,7 +28,8 @@ pub trait Integeriser {
     fn size(&self) -> usize;
 }
 
-/// Structure that maps to every element of type `A` an integer of type `usize`, given that `A: Eq + Hash`.  Mapping goes both ways.
+/// Structure that maps to every element of type `A` an integer of type `usize`,
+/// given that `A: Eq + Hash`.  Mapping goes both ways.
 ///
 /// # Example
 ///
@@ -59,11 +62,14 @@ pub struct HashIntegeriser<A: Eq + Hash> {
 impl<A: Eq + Hash> HashIntegeriser<A> {
     /// Constructs a new, empty `HashIntegeriser<A>`.
     pub fn new() -> HashIntegeriser<A> {
-        HashIntegeriser { map: Vec::new(), rmap: HashMap::new() }
+        HashIntegeriser {
+            map: Vec::new(),
+            rmap: HashMap::new(),
+        }
     }
 
     /// `Vec` containing all the values that have been stored in the iterator.
-    pub fn values(&self) -> &Vec<A>{
+    pub fn values(&self) -> &Vec<A> {
         &self.map
     }
 }
@@ -138,7 +144,8 @@ impl<'de, A: Eq + Hash + Clone + Deserialize<'de>> Deserialize<'de> for HashInte
 }
 
 
-/// Structure that maps to every element of type `A` an integer of type `usize`, given that `A: Eq + Ord`.  Mapping goes both ways.
+/// Structure that maps to every element of type `A` an integer of type `usize`,
+/// given that `A: Eq + Ord`.  Mapping goes both ways.
 ///
 /// # Example
 ///
@@ -171,11 +178,14 @@ pub struct BTreeIntegeriser<A: Ord + Eq> {
 impl<A: Eq + Ord> BTreeIntegeriser<A> {
     /// Constructs a new, empty `BTreeIntegeriser<A>`.
     pub fn new() -> BTreeIntegeriser<A> {
-        BTreeIntegeriser { map: Vec::new(), rmap: BTreeMap::new() }
+        BTreeIntegeriser {
+            map: Vec::new(),
+            rmap: BTreeMap::new(),
+        }
     }
 
     /// `Vec` containing all the values that have been stored in the iterator.
-    pub fn values(&self) -> &Vec<A>{
+    pub fn values(&self) -> &Vec<A> {
         &self.map
     }
 }
@@ -237,14 +247,14 @@ impl<A: Eq + Ord + Hash> Hash for BTreeIntegeriser<A> {
 impl<A: Ord + Serialize> Serialize for BTreeIntegeriser<A> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.map.serialize(serializer)
-    } 
+    }
 }
 
 impl<'de, A: Ord + Clone + Deserialize<'de>> Deserialize<'de> for BTreeIntegeriser<A> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let map: Vec<A> = Vec::deserialize(deserializer)?;
         let rmap: BTreeMap<A, usize> = map.iter().cloned().enumerate().map(|(x,y)| (y,x)).collect();
-        
+
         Ok(BTreeIntegeriser{ map, rmap })
-    } 
+    }
 }
