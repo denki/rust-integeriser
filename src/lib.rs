@@ -5,9 +5,11 @@ use std::collections::hash_map;
 use std::hash::{Hash, Hasher, BuildHasher};
 use std::vec::Vec;
 
+#[cfg(feature = "serialisation")]
 extern crate serde;
-use serde::ser::{Serialize, Serializer};
-use serde::de::{Deserialize, Deserializer};
+
+#[cfg(feature = "fnv-hashintegeriser")]
+extern crate fnv;
 
 pub trait Integeriser {
     type Item;
@@ -143,14 +145,16 @@ impl<A: Eq + Hash, S: BuildHasher> Hash for HashIntegeriser<A, S> {
     }
 }
 
-impl<A: Eq + Hash + Serialize, BH: BuildHasher> Serialize for HashIntegeriser<A, BH> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+#[cfg(feature = "serialisation")]
+impl<A: Eq + Hash + serde::Serialize, BH: BuildHasher> serde::Serialize for HashIntegeriser<A, BH> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.map.serialize(serializer)
     } 
 }
 
-impl<'de, A: Eq + Hash + Clone + Deserialize<'de>, S: BuildHasher + Default> Deserialize<'de> for HashIntegeriser<A, S> {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+#[cfg(feature = "serialisation")]
+impl<'de, A: Eq + Hash + Clone + serde::Deserialize<'de>, S: BuildHasher + Default> serde::Deserialize<'de> for HashIntegeriser<A, S> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let map: Vec<A> = Vec::deserialize(deserializer)?;
         let rmap: HashMap<A, usize, S> = map.iter().cloned().enumerate().map(| (x,y) | (y,x)).collect();
 
@@ -158,8 +162,6 @@ impl<'de, A: Eq + Hash + Clone + Deserialize<'de>, S: BuildHasher + Default> Des
     } 
 }
 
-#[cfg(feature = "fnv-hashintegeriser")]
-extern crate fnv;
 #[cfg(feature = "fnv-hashintegeriser")]
 pub type FnvHashIntegeriser<A> = HashIntegeriser<A, fnv::FnvHasher>;
 
@@ -264,14 +266,16 @@ impl<A: Eq + Ord + Hash> Hash for BTreeIntegeriser<A> {
     }
 }
 
-impl<A: Ord + Serialize> Serialize for BTreeIntegeriser<A> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+#[cfg(feature = "serialisation")]
+impl<A: Ord + serde::Serialize> serde::Serialize for BTreeIntegeriser<A> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.map.serialize(serializer)
     }
 }
 
-impl<'de, A: Ord + Clone + Deserialize<'de>> Deserialize<'de> for BTreeIntegeriser<A> {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+#[cfg(feature = "serialisation")]
+impl<'de, A: Ord + Clone + serde::Deserialize<'de>> serde::Deserialize<'de> for BTreeIntegeriser<A> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let map: Vec<A> = Vec::deserialize(deserializer)?;
         let rmap: BTreeMap<A, usize> = map.iter().cloned().enumerate().map(|(x,y)| (y,x)).collect();
 
