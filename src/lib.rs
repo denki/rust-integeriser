@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 use std::collections::btree_map;
 use std::collections::hash_map;
-use std::hash::{Hash, Hasher};
+use std::hash::{Hash, Hasher, BuildHasher};
 use std::vec::Vec;
 
 extern crate serde;
@@ -54,27 +54,42 @@ pub trait Integeriser {
 /// assert_ne!(arr1i[3], arr2i[3]);
 /// ```
 #[derive(Clone, Debug)]
-pub struct HashIntegeriser<A: Eq + Hash> {
+pub struct HashIntegeriser<A, S=hash_map::RandomState>
+where
+    A: Eq + Hash,
+    S: BuildHasher
+{
     map: Vec<A>,
-    rmap: HashMap<A, usize>,
+    rmap: HashMap<A, usize, S>,
 }
 
-impl<A: Eq + Hash> HashIntegeriser<A> {
+impl<A: Eq + Hash> HashIntegeriser<A, hash_map::RandomState> {
     /// Constructs a new, empty `HashIntegeriser<A>`.
-    pub fn new() -> HashIntegeriser<A> {
+    pub fn new() -> Self {
         HashIntegeriser {
             map: Vec::new(),
-            rmap: HashMap::new(),
+            rmap: HashMap::default(),
         }
     }
+}
 
+impl<A: Eq + Hash, S: BuildHasher + Default> Default for HashIntegeriser<A, S> {
+    fn default() -> Self {
+        HashIntegeriser {
+            map: Vec::new(),
+            rmap: HashMap::default()
+        }
+    }
+}
+
+impl<A: Eq + Hash, S: BuildHasher> HashIntegeriser<A, S> {
     /// `Vec` containing all the values that have been stored in the iterator.
     pub fn values(&self) -> &Vec<A> {
         &self.map
     }
 }
 
-impl<'a, A: Clone + Eq + Hash> Integeriser for HashIntegeriser<A> {
+impl<'a, A: Clone + Eq + Hash, S: BuildHasher> Integeriser for HashIntegeriser<A, S> {
     type Item = A;
 
     fn integerise(&mut self, a: A) -> usize {
@@ -102,46 +117,51 @@ impl<'a, A: Clone + Eq + Hash> Integeriser for HashIntegeriser<A> {
     }
 }
 
-impl<A: Eq + Hash> PartialEq for HashIntegeriser<A> {
+impl<A: Eq + Hash, S: BuildHasher> PartialEq for HashIntegeriser<A, S> {
     fn eq(&self, other: &Self) -> bool {
         self.map == other.map
     }
 }
 
-impl<A: Eq + Hash> Eq for HashIntegeriser<A> {}
+impl<A: Eq + Hash, S: BuildHasher> Eq for HashIntegeriser<A, S> {}
 
-impl<A: Eq + Hash + PartialOrd> PartialOrd for HashIntegeriser<A> {
+impl<A: Eq + Hash + PartialOrd, S: BuildHasher> PartialOrd for HashIntegeriser<A, S> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.map.partial_cmp(&other.map)
     }
 }
 
-impl<A: Eq + Hash + Ord> Ord for HashIntegeriser<A> {
+impl<A: Eq + Hash + Ord, S: BuildHasher> Ord for HashIntegeriser<A, S> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.map.cmp(&other.map)
     }
 }
 
-impl<A: Eq + Hash> Hash for HashIntegeriser<A> {
+impl<A: Eq + Hash, S: BuildHasher> Hash for HashIntegeriser<A, S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.map.hash(state);
     }
 }
 
-impl<A: Eq + Hash + Serialize> Serialize for HashIntegeriser<A> {
+impl<A: Eq + Hash + Serialize, BH: BuildHasher> Serialize for HashIntegeriser<A, BH> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.map.serialize(serializer)
     } 
 }
 
-impl<'de, A: Eq + Hash + Clone + Deserialize<'de>> Deserialize<'de> for HashIntegeriser<A> {
+impl<'de, A: Eq + Hash + Clone + Deserialize<'de>, S: BuildHasher + Default> Deserialize<'de> for HashIntegeriser<A, S> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let map: Vec<A> = Vec::deserialize(deserializer)?;
-        let rmap: HashMap<A, usize> = map.iter().cloned().enumerate().map(| (x,y) | (y,x)).collect();
+        let rmap: HashMap<A, usize, S> = map.iter().cloned().enumerate().map(| (x,y) | (y,x)).collect();
 
         Ok(HashIntegeriser{ map, rmap })
     } 
 }
+
+#[cfg(feature = "fnv-hashintegeriser")]
+extern crate fnv;
+#[cfg(feature = "fnv-hashintegeriser")]
+pub type FnvHashIntegeriser<A> = HashIntegeriser<A, fnv::FnvHasher>;
 
 
 /// Structure that maps to every element of type `A` an integer of type `usize`,

@@ -8,3 +8,7 @@ repository = "https://github.com/tud-fop/rust-integeriser"
 
 [dependencies]
 serde = "1.0"
+fnv = { version = "*", optional = true }
+
+[features]
+fnv-hashintegeriser = ["fnv"]
